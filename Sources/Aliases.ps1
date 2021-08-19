@@ -122,7 +122,7 @@ function Invoke-GitAddCommitPush {
     }
 
     git add .
-    git commit -m '$CommitMessage'
+    git commit -m "$CommitMessage"
     git push -u origin "$(git config --get init.defaultBranch)"
 }
 
