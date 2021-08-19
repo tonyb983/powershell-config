@@ -13,7 +13,7 @@ function Write-InitOutput {
         $Text
     )
 
-    $host.UI.WriteLine($Text)
+    Write-Host "$Text"
 }
 
 function Import-VcpkgPosh {
@@ -49,10 +49,18 @@ function Test-ModuleUpdate {
 $DIR_LISTING_TYPE = 'default'
 $PROFILE_DIR = (Split-Path $PROFILE)
 
-$_shouldinit = ($host.Name -eq 'ConsoleHost' -or $host.Name -eq 'Visual Studio Code Host') -and ([System.Environment]::GetCommandLineArgs() -inotcontains "-noni" -and [System.Environment]::GetCommandLineArgs() -inotcontains "-NonInteractive")
+$_isterm = $host.Name -eq 'ConsoleHost'
+$_isvscode = $env:TERM_PROGRAM -eq 'vscode'
+$_isnoni = [System.Environment]::GetCommandLineArgs() -icontains "-noni" -or [System.Environment]::GetCommandLineArgs() -icontains "-NonInteractive"
+$_shouldinit = !$_isnoni -and $_isterm
 
 #use PSReadLine only for PowerShell and VS Code
 if ($_shouldinit) {
+    Write-InitOutput "====================="
+    Write-InitOutput "Should Init is True."
+    Write-InitOutput ("IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}" -f $_isterm, $_isvscode, $_isnoni)
+    Write-InitOutput ("Host = {0} | Args = {1}." -f $host.Name, ([System.Environment]::GetCommandLineArgs() -join ','))
+    Write-InitOutput "====================="
     $_now = (Get-Date)
     $PROFILE_DIR = (Split-Path $PROFILE)
     Write-InitOutput ("Starting profile init at {0} in directory {1} with host {2}" -f $_now.ToString(), $PROFILE_DIR, $host.Name)
@@ -85,9 +93,15 @@ if ($_shouldinit) {
 
     Test-ModuleUpdate
 
-    Invoke-Fetch
+    if (! $_isvscode) {
+        Invoke-Fetch
+    }
 } else {
-    Write-InitOutput ("Should Init is False. Host = {0} | Args = {1}." -f $host.Name, ([System.Environment]::GetCommandLineArgs() -join ','))
+    Write-InitOutput "====================="
+    Write-InitOutput "Should Init is False."
+    Write-InitOutput ("IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}" -f $_isterm, $_isvscode, $_isnoni)
+    Write-InitOutput ("Host = {0} | Args = {1}." -f $host.Name, ([System.Environment]::GetCommandLineArgs() -join ','))
+    Write-InitOutput "====================="
 }
 
 # Remove-Item -Path Function:Write-InitOutput
