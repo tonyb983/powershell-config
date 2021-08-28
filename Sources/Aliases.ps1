@@ -1,26 +1,33 @@
 function Invoke-Batcat {
+    Write-Log -Level INFO -Message 'Invoke-Batcat called' -Body @{Args = $args}
     bat.exe --theme Dracula $args
 }
 
 function Invoke-DefaultLs {
+    Write-Log -Level INFO -Message 'Invoke-DefaultLs called' -Body @{Args = $args}
     Get-ChildItem @args
 }
 
 function Invoke-DefaultLl {
+    Write-Log -Level INFO -Message 'Invoke-DefaultLs called' -Body @{Args = $args}
     Get-ChildItem -Verbose @args
 }
 
 function Invoke-LsdLs {
+    Write-Log -Level INFO -Message 'Invoke-LsdLs called' -Body @{Args = $args}
     lsd --almost-all --group-dirs first --icon-theme fancy $args
 }
 
 function Invoke-LsdLl {
+    Write-Log -Level INFO -Message 'Invoke-LsdLl called' -Body @{Args = $args}
     lsd --almost-all -lL --size short --date relative --group-dirs first --icon-theme fancy --blocks 'permission,size,date,name' $args
 }
 
 function Invoke-Ls {
+    Write-Log -Level INFO -Message "Invoke-Ls called"
+
     if ($DIR_LISTING_TYPE -eq '' -or $null -eq $DIR_LISTING_TYPE) {
-        Write-Host 'DIR_LISTING_TYPE is not set! Using default method.'
+        Write-Log -Level WARNING -Message 'DIR_LISTING_TYPE is not set! Using default method.'
         Invoke-DefaultLs @args
     }
     elseif ($DIR_LISTING_TYPE -eq 'lsd') {
@@ -30,13 +37,14 @@ function Invoke-Ls {
         Invoke-DefaultLs @args
     }
     else {
-        Write-Host "Unknown value for DIR_LISTING_TYPE: '$DIR_LISTING_TYPE'"
+        Write-Log -Level ERROR -Message "Unknown value for DIR_LISTING_TYPE: '{0}'" -Arguments $DIR_LISTING_TYPE
     }
 }
 
 function Invoke-Ll {
+    Write-Log -Level INFO -Message "Invoke-Ll called"
     if ($DIR_LISTING_TYPE -eq '' -or $null -eq $DIR_LISTING_TYPE) {
-        Write-Host 'DIR_LISTING_TYPE is not set! Using default method.'
+        Write-Log -Level WARNING -Message 'DIR_LISTING_TYPE is not set! Using default method.'
         Invoke-DefaultLl @args
     }
     elseif ($DIR_LISTING_TYPE -eq 'lsd') {
@@ -46,7 +54,7 @@ function Invoke-Ll {
         Invoke-DefaultLl @args
     }
     else {
-        Write-Host "Unknown value for DIR_LISTING_TYPE: '$DIR_LISTING_TYPE'"
+        Write-Log -Level ERROR -Message "Unknown value for DIR_LISTING_TYPE: '{0}'" -Arguments $DIR_LISTING_TYPE
     }
 }
 
@@ -83,7 +91,7 @@ function Invoke-GitAddCommitPush {
         $CommitMessage
     )
 
-    Write-Output "gacp called, CommitMessage = $CommitMessage, Args Count = ${args.Count()}, Args = $args"
+    Write-Log -Level INFO -Message 'gacp called, CommitMessage = {0}, Args = {1}' -Arguments $CommitMessage, $args
 
     function PrintUsage {
         Write-Host -ForegroundColor White "gacp - git add, commit and push"
@@ -126,7 +134,22 @@ function Invoke-GitAddCommitPush {
     git push -u origin "$(git config --get init.defaultBranch)"
 }
 
-Set-Alias -Name cat -Value Invoke-Batcat
-Set-Alias -Name ls -Value Invoke-Ls
-Set-Alias -Name ll -Value Invoke-Ll
-Set-Alias -Name gacp -Value Invoke-GitAddCommitPush
+function Start-Brogue {
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]
+        $Params
+    )
+
+    $_params = ($Params -join ' ')
+    Write-Log -Level INFO -Message 'Start-Brogue called. RawParams = {0}, FixedParams = {1}' -Arguments $Params, $_params
+    $_broguepath = 'C:\Tony\Misc\BrogueCE-windows\brogue-cmd.bat'
+    Invoke-Expression "$_broguepath $_params"
+}
+
+Set-Alias -Name cat -Value Invoke-Batcat # -PassThru
+Set-Alias -Name ls -Value Invoke-Ls # -PassThru
+Set-Alias -Name ll -Value Invoke-Ll # -PassThru
+Set-Alias -Name gacp -Value Invoke-GitAddCommitPush # -PassThru
+Set-Alias -Name brogue -Value Start-Brogue # -PassThru

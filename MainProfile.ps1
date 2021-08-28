@@ -6,11 +6,14 @@
 # C:\Users\alexa\AppData\Local\Microsoft\WindowsApps\wt.exe
 # C:\Users\alexa\AppData\Local\Microsoft\WindowsApps\Microsoft.WindowsTerminal_8wekyb3d8bbwe\wt.exe
 
-function Import-VcpkgPosh {
-    # VcPkg Profile
-    $VcpkgPosh = "$env:VCPKG_ROOT\scripts\posh-vcpkg\0.0.1\posh-vcpkg.psm1"
-    if (Test-Path($VcpkgPosh)) {
+function Initialize-VcpkgPosh {
+    Write-Log -Level INFO -Message "Initialize-VcpkgPosh called"
+
+    $VcpkgPosh = "$Env:VCPKG_ROOT\scripts\posh-vcpkg"
+    if (Test-Path $VcpkgPosh) {
         Import-Module "$VcpkgPosh"
+    } else {
+        Write-Log -Level ERROR -Message 'Error importing posh-vcpkg module! $VcpkgPosh = {0}' -Arguments $VcpkgPosh
     }
 }
 
@@ -43,6 +46,27 @@ function Initialize-LoggingFramework {
     Set-LoggingDefaultFormat -Format '%{timestamp:+yyyy/MM/dd HH:mm:ss.fff}|%{level}|%{pid}|%{caller}: %{message} %{body}'
 }
 
+function Initialize-TonyDrive {
+    Write-Log -Level INFO -Message 'Initialize-TonyDrive called'
+
+    $_path = $Env:TONY_DIR
+    if ($null -eq $_path) {
+        Write-Log -Level ERROR -Message 'TONY_DIR is null! Aborting Initialize-TonyDrive!'
+        return
+    }
+
+    if ('' -eq $_path) {
+        Write-Log -Level ERROR -Message 'TONY_DIR is empty! Aborting Initialize-TonyDrive!'
+        return
+    }
+
+    if (Test-Path $_path) {
+        New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global
+    } else {
+        Write-Log -Level ERROR -Message 'TONY_DIR path is not valid! path = {0}' -Arguments $_path
+    }    
+}
+
 function Register-ConsoleLoggingTarget {
     Add-LoggingTarget -Name Console -Configuration @{
         PrintException = $true
@@ -50,7 +74,6 @@ function Register-ConsoleLoggingTarget {
 }
 
 function Register-FileLoggingTarget {
-    Write-Output "Log File: $('{0}\main_{1}.log' -f $PS_LOG_DIR, '%{+%Y%m%d}')"
     Add-LoggingTarget -Name File -Configuration @{
         Path           = ('{0}\main_{1}.log' -f $PS_LOG_DIR, '%{+%Y%m%d}')
         PrintBody      = $true
@@ -61,9 +84,18 @@ function Register-FileLoggingTarget {
 }
 
 # $DIR_LISTING_TYPE = 'lsd'
-$DIR_LISTING_TYPE = 'default'
-$PROFILE_DIR = (Split-Path $PROFILE)
-$PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
+$Env:DIR_LISTING_TYPE = 'default'
+$DIR_LISTING_TYPE = $Env:DIR_LISTING_TYPE
+$Env:PROFILE_DIR = (Split-Path $PROFILE)
+$PROFILE_DIR = $Env:PROFILE_DIR
+$Env:TONY_DIR = (Resolve-Path C:\Tony)
+$TONY_DIR = $Env:TONY_DIR
+$Env:PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
+$PS_LOG_DIR = $Env:PS_LOG_DIR
+$Env:VCPKG_ROOT = "$TONY_DIR\Repos\vcpkg"
+$VCPKG_ROOT = $Env:VCPKG_ROOT
+$Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
+$VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
 
 $_isterm = $host.Name -eq 'ConsoleHost'
 $_isvscode = $env:TERM_PROGRAM -eq 'vscode'
@@ -90,6 +122,8 @@ if ($_shouldinit) {
 
     Import-Module posh-git
     Import-Module PSReadline -MinimumVersion 2.2.0
+    Initialize-VcpkgPosh
+    Initialize-TonyDrive
 
     Write-Log -Level INFO -Message 'Sourcing PSReadline config...'
     . "$PROFILE_DIR\PSReadlineDefaults.ps1"

@@ -3,6 +3,9 @@
 using namespace System.Management.Automation
 using namespace System.Management.Automation.Language
 
+Write-Error "Completions\cargo.ps1 is not complete, aborting sourcing!"
+return
+
 Register-ArgumentCompleter -Native -CommandName 'cargo' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
