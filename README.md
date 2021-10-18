@@ -1,0 +1,2 @@
+# Personal Powershell Configuration
+After writing and rewriting what amounted to essentially the same code every time I changed laptops, I decided to set up a dotfile-esque repository for my personal Powershell set-up and configuration files. This is a personal project and not intended for reuse by anyone but me, so it very much contains opinionated and likely terrible code that is fit for my eyes only. But it's also public and on the internet so _hey_!
