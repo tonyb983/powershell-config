@@ -123,11 +123,11 @@ function Edit-Profile {
 
     if ($null -eq $_wkspace) {
         Write-Host 'code-workspace not found, opening profile directory.'
-        code $PROFILE_DIR
+        code -n $PROFILE_DIR
     }
     else {
         Write-Host ('Workspace Found: {0}' -f $_wkspace.FullName)
-        code $_wkspace
+        code -n $_wkspace
     }
     
 }
@@ -136,7 +136,13 @@ function Invoke-Fetch {
     Write-Log -Level INFO -Message 'Invoke-Fetch called'
     # Runs slow...
     # winfetch
-    macchina -t (Get-Random Hydrogen, Helium, Lithium, Beryllium, Boron) --small-ascii -prR
+    macchina `
+        -t (Get-Random Hydrogen, Helium, Lithium, Beryllium, Boron) `
+        --bar `
+        --palette Dark `
+        --random-color `
+        --random-sep-color `
+        --small-ascii
 }
 
 function Get-FileEncoding {

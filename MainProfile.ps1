@@ -90,12 +90,24 @@ $Env:PROFILE_DIR = (Split-Path $PROFILE)
 $PROFILE_DIR = $Env:PROFILE_DIR
 $Env:TONY_DIR = (Resolve-Path C:\Tony)
 $TONY_DIR = $Env:TONY_DIR
+$Env:TONY_BIN_DIR = (Resolve-Path "$TONY_DIR\Bin\")
+$TONY_BIN_DIR = $Env:TONY_BIN_DIR
+$Env:TONY_CODE_DIR = (Resolve-Path "$TONY_DIR\Code\")
+$TONY_CODE_DIR = $Env:TONY_CODE_DIR
+$Env:TONY_REPOS_DIR = (Resolve-Path "$TONY_DIR\Repos\")
+$TONY_REPOS_DIR = $Env:TONY_REPOS_DIR
 $Env:PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
 $PS_LOG_DIR = $Env:PS_LOG_DIR
+
+# Vcpkg Options
 $Env:VCPKG_ROOT = "$TONY_DIR\Repos\vcpkg"
 $VCPKG_ROOT = $Env:VCPKG_ROOT
 $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
 $VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
+
+# Misc. Globals
+$Env:EDITOR = "code"
+$EDITOR = $Env:EDITOR
 
 $_isterm = $host.Name -eq 'ConsoleHost'
 $_isvscode = $env:TERM_PROGRAM -eq 'vscode'
