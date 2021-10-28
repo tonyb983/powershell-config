@@ -7,23 +7,56 @@
 # C:\Users\alexa\AppData\Local\Microsoft\WindowsApps\Microsoft.WindowsTerminal_8wekyb3d8bbwe\wt.exe
 
 function Initialize-VcpkgPosh {
-    Write-Log -Level INFO -Message "Initialize-VcpkgPosh called"
+    Write-Log -Level INFO -Message 'Initialize-VcpkgPosh called'
 
     $VcpkgPosh = "$Env:VCPKG_ROOT\scripts\posh-vcpkg"
     if (Test-Path $VcpkgPosh) {
         Import-Module "$VcpkgPosh"
-    } else {
+    }
+    else {
         Write-Log -Level ERROR -Message 'Error importing posh-vcpkg module! $VcpkgPosh = {0}' -Arguments $VcpkgPosh
     }
 }
 
-function Test-ModuleUpdate {
-    Write-Log -Level INFO -Message 'Running Test-ModuleUpdate'
+function Update-Vcpkg {
+    Write-Log -Level INFO -Message 'Update-Vcpkg called, checking for updates to vcpkg'
+
+    Push-Location $Env:VCPKG_ROOT
+    
+    if (!(Test-Path .\.vcpkg-root)) {
+        $_currpath = (Get-Location).Path
+        Write-Log -Level ERROR -Message 'Unable to find .vcpkg-root marker, check your code! pwd = {0}' -Arguments $_currpath
+        Pop-Location
+        return
+    }
+
+    $_output = (git status -uno)
+    $_combined = [string]::Join('\n', $_output)
+    Write-Log -Level INFO -Message 'git status run' -Body @{Output = $_output; JoinedOutput = $_combined }
+    if ($_combined.Contains('up to date')) {
+        Write-Log -Level INFO -Message 'local branch is up-to-date, no update is necessary'
+    }
+    else {
+        Write-Log -Level INFO -Message 'local branch is not up-to-date, pulling remote'
+        git pull
+        .\bootstrap-vcpkg.bat
+        Write-Log -Level INFO -Message 'vcpkg has been updated'
+    }
+    Pop-Location
+}
+
+function Invoke-OncePerDay {
+    Update-Module
+    Update-Vcpkg
+}
+
+function Test-OncePerDay {
+    Write-Log -Level INFO -Message 'Running Test-OncePerDay'
     $update_marker = (Get-ChildItem -Path "$PROFILE_DIR\.update_marker" -File -Force -ErrorAction SilentlyContinue)
     if ($null -eq $update_marker) {
         Write-Log -Level INFO -Message 'Unable to find update_marker, creating now...'
         New-Item -Path "$PROFILE_DIR\.update_marker" -ItemType File
-        Update-Module
+        Invoke-OncePerDay
     }
     else {
         Write-Log -Level INFO -Message 'update_marker found...'
@@ -31,7 +64,7 @@ function Test-ModuleUpdate {
         # $host.UI.WriteLine([string]::Format("{0} days since last update...", $lastupdate))
         if ((Get-Date).Subtract($update_marker.CreationTime).Days -gt 0) {
             Write-Log -Level INFO -Message 'More than one day since last module update, running update...'
-            Update-Module
+            Invoke-OncePerDay
             $update_marker.CreationTime = (Get-Date)
         }
         else {
@@ -62,7 +95,8 @@ function Initialize-TonyDrive {
 
     if (Test-Path $_path) {
         New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global
-    } else {
+    }
+    else {
         Write-Log -Level ERROR -Message 'TONY_DIR path is not valid! path = {0}' -Arguments $_path
     }    
 }
@@ -80,6 +114,19 @@ function Register-FileLoggingTarget {
         PrintException = $true
         Append         = $true
         Encoding       = 'ascii'
+    }
+}
+
+function Test-IsPromptElevatedManual {
+    try {
+        $_elevated = Get-ChildItem "$PROFILE_DIR\TestElevated.ps1"
+        . $_elevated
+        Write-Log -Level INFO -Message 'Powershell prompt found to be elevated'
+        return $true
+    }
+    catch {
+        Write-Log -Level INFO -Message 'Powershell prompt found to NOT be elevated'
+        return $false
     }
 }
 
@@ -106,7 +153,7 @@ $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
 $VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
 
 # Misc. Globals
-$Env:EDITOR = "code"
+$Env:EDITOR = 'code'
 $EDITOR = $Env:EDITOR
 
 $_isterm = $host.Name -eq 'ConsoleHost'
@@ -114,11 +161,19 @@ $_isvscode = $env:TERM_PROGRAM -eq 'vscode'
 $_isnoni = [System.Environment]::GetCommandLineArgs() -icontains '-noni' -or [System.Environment]::GetCommandLineArgs() -icontains '-NonInteractive'
 $_shouldinit = !$_isnoni -and $_isterm
 
+$PS_IS_ELEVATED = $false
+
+# Logging is set up for any powershell session.
+# Console logging is only enabled for interactive sessions that are NOT run inside of VSCode.
+
 #use PSReadLine only for PowerShell and VS Code
 if ($_shouldinit) {
     Initialize-LoggingFramework
-    Register-ConsoleLoggingTarget
+    if (!$_isvscode) { 
+        Register-ConsoleLoggingTarget
+    }
     Register-FileLoggingTarget
+
     Write-Log -Level INFO -Message '====================='
     Write-Log -Level INFO -Message 'Should Init is True.'
     Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
@@ -152,10 +207,19 @@ if ($_shouldinit) {
         . $_
     }
 
+    $PS_IS_ELEVATED = (Test-IsPromptElevated)
+
     Invoke-Expression (&starship init powershell)
 
-    Test-ModuleUpdate
+    # Updating modules from an elevated prompt has issues, 
+    #   so keep daily tasks confined to not elevated prompts.
+    if ($PS_IS_ELEVATED) { 
+        break
+    }
 
+    Test-OncePerDay
+
+    # Don't clutter up the already small VSCode Console with fetch graphics
     if (! $_isvscode) {
         Invoke-Fetch
     }
@@ -163,8 +227,10 @@ if ($_shouldinit) {
 else {
     Initialize-LoggingFramework
     Register-FileLoggingTarget
+    $PS_IS_ELEVATED = (Test-IsPromptElevatedManual)
     Write-Log -Level INFO -Message '====================='
     Write-Log -Level INFO -Message 'Should Init is False.'
+    Write-Log -Level INFO -Message 'IsElevated = {0}' -Arguments $PS_IS_ELEVATED
     Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
     Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
     Write-Log -Level INFO -Message '====================='

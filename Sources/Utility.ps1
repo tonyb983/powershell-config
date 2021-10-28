@@ -268,3 +268,13 @@ function Confirm-YesOrNo {
         return $false
     }
 }
+
+function Test-IsPromptElevated {
+    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        $false
+    }
+    else {
+        $true
+    }
+}
