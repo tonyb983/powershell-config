@@ -195,8 +195,7 @@ if ($_shouldinit) {
     . "$PROFILE_DIR\PSReadlineDefaults.ps1"
 
     Write-Log -Level INFO -Message 'Sourcing completions...'
-    $_completions = Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1'
-    foreach ($_it in $_completions) {
+    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1') {
         Write-Log -Level INFO -Message 'Sourcing {0} completions.' -Arguments $_it.BaseName
         if ($_it.BaseName.StartsWith('_')) {
             Write-Log -Level INFO -Message 'Completions for {0} are incomplete, skipping.' -Arguments $_it.BaseName  
@@ -206,8 +205,7 @@ if ($_shouldinit) {
     }
 
     Write-Log -Level INFO -Message 'Sourcing additional config...'
-    $_sources = Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1'
-    foreach ($_it in $_sources) {
+    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1') {
         Write-Log -Level INFO -Message 'Sourcing {0}.' -Arguments $_it.Name
         if ($_it.BaseName.StartsWith('_')) {
             Write-Log -Level INFO -Message 'Config {0} is marked incomplete, skipping.' -Arguments $_it.BaseName  
