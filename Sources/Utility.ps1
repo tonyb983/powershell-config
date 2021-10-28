@@ -264,14 +264,14 @@ function Confirm-YesOrNo {
 
     if ($_answer -eq 0) {
         return $true
-    } else {
+    }
+    else {
         return $false
     }
 }
 
 function Test-IsPromptElevated {
-    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
         $false
     }
     else {

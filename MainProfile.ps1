@@ -161,25 +161,24 @@ $_isvscode = $env:TERM_PROGRAM -eq 'vscode'
 $_isnoni = [System.Environment]::GetCommandLineArgs() -icontains '-noni' -or [System.Environment]::GetCommandLineArgs() -icontains '-NonInteractive'
 $_shouldinit = !$_isnoni -and $_isterm
 
-$PS_IS_ELEVATED = $false
+$PS_IS_ELEVATED = (Test-IsPromptElevatedManual)
 
 # Logging is set up for any powershell session.
 # Console logging is only enabled for interactive sessions that are NOT run inside of VSCode.
+Initialize-LoggingFramework
+# Register-ConsoleLoggingTarget
+Register-FileLoggingTarget
+Write-Log -Level INFO -Message '====================='
+Write-Log -Level INFO -Message 'Powershell started at {0}' -Arguments (Get-Date)
+Write-Log -Level INFO -Message 'IsElevated = {0}' -Arguments $PS_IS_ELEVATED
+Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
+Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
+Write-Log -Level INFO -Message 'ShouldInit = {0}' -Arguments $_shouldinit
+Write-Log -Level INFO -Message '====================='
 
 #use PSReadLine only for PowerShell and VS Code
 if ($_shouldinit) {
-    Initialize-LoggingFramework
-    if (!$_isvscode) { 
-        Register-ConsoleLoggingTarget
-    }
-    Register-FileLoggingTarget
-
-    Write-Log -Level INFO -Message '====================='
-    Write-Log -Level INFO -Message 'Should Init is True.'
-    Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
-    Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
-    Write-Log -Level INFO -Message '====================='
-    Write-Log -Level INFO -Message 'Starting profile init in directory {0} with host {1}' -Arguments $PROFILE_DIR, $host.Name
+    Write-Log -Level INFO -Message 'Starting MainProfile init'
 
     #ensure the correct version is loaded
     if ($DIR_LISTING_TYPE -eq 'default' -or $DIR_LISTING_TYPE -eq '' -or $null -eq $DIR_LISTING_TYPE) {
@@ -196,18 +195,26 @@ if ($_shouldinit) {
     . "$PROFILE_DIR\PSReadlineDefaults.ps1"
 
     Write-Log -Level INFO -Message 'Sourcing completions...'
-    Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1' | ForEach-Object {
-        Write-Log -Level INFO -Message 'Sourcing {0} completions.' -Arguments $_.BaseName
-        . $_
+    $_completions = Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1'
+    foreach ($_it in $_completions) {
+        Write-Log -Level INFO -Message 'Sourcing {0} completions.' -Arguments $_it.BaseName
+        if ($_it.BaseName.StartsWith('_')) {
+            Write-Log -Level INFO -Message 'Completions for {0} are incomplete, skipping.' -Arguments $_it.BaseName  
+            continue 
+        }
+        . $_it
     }
 
     Write-Log -Level INFO -Message 'Sourcing additional config...'
-    Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1' | ForEach-Object {
-        Write-Log -Level INFO -Message 'Sourcing {0}.' -Arguments $_.Name
-        . $_
+    $_sources = Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1'
+    foreach ($_it in $_sources) {
+        Write-Log -Level INFO -Message 'Sourcing {0}.' -Arguments $_it.Name
+        if ($_it.BaseName.StartsWith('_')) {
+            Write-Log -Level INFO -Message 'Config {0} is marked incomplete, skipping.' -Arguments $_it.BaseName  
+            continue 
+        }
+        . $_it
     }
-
-    $PS_IS_ELEVATED = (Test-IsPromptElevated)
 
     Invoke-Expression (&starship init powershell)
 
@@ -223,15 +230,4 @@ if ($_shouldinit) {
     if (! $_isvscode) {
         Invoke-Fetch
     }
-}
-else {
-    Initialize-LoggingFramework
-    Register-FileLoggingTarget
-    $PS_IS_ELEVATED = (Test-IsPromptElevatedManual)
-    Write-Log -Level INFO -Message '====================='
-    Write-Log -Level INFO -Message 'Should Init is False.'
-    Write-Log -Level INFO -Message 'IsElevated = {0}' -Arguments $PS_IS_ELEVATED
-    Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
-    Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
-    Write-Log -Level INFO -Message '====================='
 }
