@@ -136,13 +136,7 @@ function Invoke-Fetch {
     Write-Log -Level INFO -Message 'Invoke-Fetch called'
     # Runs slow...
     # winfetch
-    macchina `
-        -t (Get-Random Hydrogen, Helium, Lithium, Beryllium, Boron) `
-        --bar `
-        --palette Dark `
-        --random-color `
-        --random-sep-color `
-        --small-ascii
+    macchina -c $PROFILE_DIR/Configs/macchina.config
 }
 
 function Get-FileEncoding {
