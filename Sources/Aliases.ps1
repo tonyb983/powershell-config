@@ -41,6 +41,11 @@ function Invoke-Ls {
     }
 }
 
+function Invoke-Which {
+    Write-Log -Level INFO -Message "Invoke-Ll called. Args: {0}" -Arguments @args
+    Get-Command @args
+}
+
 function Invoke-Ll {
     Write-Log -Level INFO -Message "Invoke-Ll called"
     if ($DIR_LISTING_TYPE -eq '' -or $null -eq $DIR_LISTING_TYPE) {
@@ -153,3 +158,4 @@ Set-Alias -Name ls -Value Invoke-Ls # -PassThru
 Set-Alias -Name ll -Value Invoke-Ll # -PassThru
 Set-Alias -Name gacp -Value Invoke-GitAddCommitPush # -PassThru
 Set-Alias -Name brogue -Value Start-Brogue # -PassThru
+Set-Alias -Name which -Value Invoke-Which # -PassThru
