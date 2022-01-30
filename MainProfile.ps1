@@ -145,12 +145,32 @@ $Env:TONY_REPOS_DIR = (Resolve-Path "$TONY_DIR\Repos\")
 $TONY_REPOS_DIR = $Env:TONY_REPOS_DIR
 $Env:PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
 $PS_LOG_DIR = $Env:PS_LOG_DIR
+$Env:TONY_LIB_DIR = (Resolve-Path "$TONY_DIR\Lib\")
+$TONY_LIB_DIR = $Env:TONY_LIB_DIR
 
 # Vcpkg Options
 $Env:VCPKG_ROOT = "$TONY_DIR\Repos\vcpkg"
 $VCPKG_ROOT = $Env:VCPKG_ROOT
 $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
 $VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
+
+# WasmEdge Setup
+$WASM_EDGE_VERSION = "WasmEdge-0.9.0-Windows"
+$Env:WASM_ROOT = "$TONY_LIB_DIR\$WASM_EDGE_VERSION"
+$WASM_ROOT = $Env:WASM_ROOT
+
+# Get clang version & set CXX variable
+try {
+    $tmp = (clang++ --version).Item(0).Split("version", 2)[1].Trim()
+    $Env:CLANG_VERSION = $tmp
+    $CXX = "clang++"
+    $Env:CXX = "clang++"
+} catch {
+    Write-Output "Unable to get clang version!"
+    $CLANG_VERSION = "error"
+    $CXX = ""
+    $Env:CXX = ""
+}
 
 # Misc. Globals
 $Env:EDITOR = 'code'
