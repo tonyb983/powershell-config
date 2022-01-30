@@ -136,12 +136,12 @@ function Invoke-GitAddCommitPush {
 
     
     $bracket_reg = [regex]'\[([^\[]*)\]'
-    $line = (git branch -vv) | where { $_.StartsWith('*')}
+    $line = (git branch -vv) | Where-Object { $_.StartsWith('*') }
     $Branch = $line.Trim().Split(' ', [StringSplitOptions]::RemoveEmptyEntries)[1].Trim()
-    $Remote_temp = $bracket_reg.Match($line).Groups[1].Value
-    $Remote = $Remote_temp.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[0]
-    $RemoteBranch = $Remote_temp.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[1]
-    Write-Output "Calling GACP with:`n`tCommit Message = $CommitMessage`n`tBranch = $Branch`n`tRemote = $Remote`n`tRemote Branch = $RemoteBranch"
+    $RemoteTotal = $bracket_reg.Match($line).Groups[1].Value
+    $Remote = $RemoteTotal.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[0]
+    $RemoteBranch = $RemoteTotal.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[1]
+    Write-Output "Calling GACP with:`n`tCommit Message = $CommitMessage`n`tBranch = $Branch`n`tRemote = $Remote`n`tRemote Branch = $RemoteBranch`n`tRemoteTotal = $RemoteTotal"
 
     try {
         git add .    
@@ -151,6 +151,11 @@ function Invoke-GitAddCommitPush {
         Write-Error -ErrorRecord $_
         return
     }
+    if (! $?) {
+        throw "An error occurred during 'git add .': $Error"
+        return
+    }
+
     try {
         git commit -m $CommitMessage
     }
@@ -159,16 +164,26 @@ function Invoke-GitAddCommitPush {
         Write-Error -ErrorRecord $_
         return
     }
+    if (! $?) {
+        throw "An error occurred during 'git commit -m $CommitMessage': $Error"
+        return
+    }
+
     try {
-        if ($Remote -ne "" -and $RemoteBranch -ne "" -and $Branch -ne "") {
-            git push -u $Remote $Branch 
-        } else {
-            Write-Output "Remote branch and local branch do not match!"
+        if ($Remote -ne '' -and $RemoteBranch -ne '' -and $Branch -ne '') {
+            git push -u "$Remote" "$Branch"
+        }
+        else {
+            Write-Output 'Remote branch and local branch do not match!'
         }
     }
     catch {
-        Write-Error "An error has occurred while running 'git push -u origin $(git config --get init.defaultBranch)'!`n"
+        Write-Error "An error has occurred while running 'git push -u $Remote $Branch'!`n"
         Write-Error -ErrorRecord $_
+        return
+    }
+    if (! $?) {
+        throw "An error occurred during 'git push -u $Remote $Branch': $Error"
         return
     }
 }
