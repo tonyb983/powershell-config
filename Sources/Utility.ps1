@@ -272,3 +272,63 @@ function Test-IsPromptElevated {
         $true
     }
 }
+
+<#
+.SYNOPSIS
+    Runs a cargo command in this and all sub-projects.
+.DESCRIPTION
+    Runs a cargo command in the current directory and any sub directories that are cargo projects.
+.EXAMPLE
+    Invoke-CargoOnAll { cargo build }
+    Runs cargo build in the current directory and any sub-directories that contain a Cargo.toml.
+    Alias: carga
+.INPUTS
+    Block - A block of code to run in each cargo project.
+.OUTPUTS
+    Output from the cargo executions.
+.NOTES
+    Simple function that gathers any directories that contain a Cargo.toml file and runs the
+    given block of code in it. It is safe in that it uses 
+#>
+function Invoke-CargoOnAll {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [ScriptBlock]
+        $Block,
+        # Parameter help description
+        [Parameter(Mandatory = $false)]
+        [uint16]
+        $Depth = [uint16]::MaxValue
+    )
+
+    $all_dirs = (Get-ChildItem $pwd -Directory -Recurse -Depth $Depth -Exclude 'target', '.*')
+    # Write-Output "Found $($all_dirs.Count) total dirs."
+    $sub_dirs = $all_dirs | Where-Object -FilterScript { Test-Path (Join-Path $_ 'Cargo.toml') }
+    $dirs = @()
+    $dirs += $sub_dirs
+    if (Test-Path .\Cargo.toml) {
+        $dirs += (Get-Item $pwd)
+    }
+    # Write-Output "Found $($dirs.Count) Cargo dirs:"
+    $dirs | Out-String
+
+    $dirs | ForEach-Object {
+        Push-Location $_
+        try {
+            Write-Output @"
+
+=======================$($_.Name.Length * '=')====
+    Running command for $($_.Name)
+=======================$($_.Name.Length * '=')====
+
+"@
+            & $Block
+        }
+        finally {
+            Pop-Location
+        }
+    }
+}
+
+Set-Alias -Name carga -Value Invoke-CargoOnAll # -PassThru

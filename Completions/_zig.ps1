@@ -1,8 +1,10 @@
-
 using namespace System.Management.Automation
 using namespace System.Management.Automation.Language
 
-Register-ArgumentCompleter -Native -CommandName 'deno' -ScriptBlock {
+Write-Error 'Completions\_zig.ps1 is not complete, aborting sourcing!'
+return
+
+Register-ArgumentCompleter -Native -CommandName 'zig' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $commandElements = $commandAst.CommandElements
