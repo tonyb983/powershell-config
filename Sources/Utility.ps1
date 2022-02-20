@@ -311,16 +311,16 @@ function Invoke-CargoOnAll {
         $dirs += (Get-Item $pwd)
     }
     # Write-Output "Found $($dirs.Count) Cargo dirs:"
-    $dirs | Out-String
+    # $dirs | Out-String
 
     $dirs | ForEach-Object {
         Push-Location $_
         try {
             Write-Output @"
 
-=======================$($_.Name.Length * '=')====
+=======================$('=' * $_.Name.Length)=====
     Running command for $($_.Name)
-=======================$($_.Name.Length * '=')====
+=======================$('=' * $_.Name.Length)=====
 
 "@
             & $Block
