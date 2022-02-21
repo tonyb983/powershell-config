@@ -134,7 +134,12 @@ function Invoke-GitAddCommitPush {
         return
     }
 
-    
+    $status_check = (git status)
+    if ($status_check.Contains('nothing to commit')) {
+        Write-Host -ForegroundColor Yellow "Nothing to commit.`n"
+        return
+    }
+
     $bracket_reg = [regex]'\[([^\[]*)\]'
     $line = (git branch -vv) | Where-Object { $_.StartsWith('*') }
     $Branch = $line.Trim().Split(' ', [StringSplitOptions]::RemoveEmptyEntries)[1].Trim()
@@ -155,6 +160,8 @@ function Invoke-GitAddCommitPush {
         throw "An error occurred during 'git add .': $Error"
         return
     }
+
+    $is_up_to_date = (git status)
 
     try {
         git commit -m $CommitMessage
