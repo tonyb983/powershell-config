@@ -135,7 +135,7 @@ function Invoke-GitAddCommitPush {
     }
 
     $status_check = (git status)
-    if ($status_check.Contains('nothing to commit')) {
+    if ([string]::Join(' ', $status_check).Contains('nothing to commit')) {
         Write-Host -ForegroundColor Yellow "Nothing to commit.`n"
         return
     }
