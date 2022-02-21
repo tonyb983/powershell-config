@@ -47,7 +47,7 @@ function Update-Vcpkg {
 
 function Invoke-OncePerDay {
     Update-Module
-    Update-Vcpkg
+    # Update-Vcpkg
 }
 
 function Test-OncePerDay {
@@ -94,11 +94,25 @@ function Initialize-TonyDrive {
     }
 
     if (Test-Path $_path) {
-        New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global
+        if (Get-PSDrive Tony -ErrorAction SilentlyContinue) {
+            Write-Log -Level WARNING -Message 'TonyDrive already exists'
+        }
+        else {
+            New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global
+        }
     }
     else {
         Write-Log -Level ERROR -Message 'TONY_DIR path is not valid! path = {0}' -Arguments $_path
     }    
+}
+
+function Initialize-Zoxide {
+    Write-Log -Level INFO -Message 'Initialize-Zoxide called'
+    # For zoxide v0.8.0+
+    Invoke-Expression (& {
+            $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
+            (zoxide init --hook $hook powershell | Out-String)
+        })
 }
 
 function Register-ConsoleLoggingTarget {
@@ -135,7 +149,9 @@ $Env:DIR_LISTING_TYPE = 'default'
 $DIR_LISTING_TYPE = $Env:DIR_LISTING_TYPE
 $Env:PROFILE_DIR = (Split-Path $PROFILE)
 $PROFILE_DIR = $Env:PROFILE_DIR
-$Env:TONY_DIR = (Resolve-Path C:\Tony)
+# Read this from the ENV, that way dir path for other folders
+# is not hard-wired to any specific location.
+# $Env:TONY_DIR = (Resolve-Path C:\Tony)
 $TONY_DIR = $Env:TONY_DIR
 $Env:TONY_BIN_DIR = (Resolve-Path "$TONY_DIR\Bin\")
 $TONY_BIN_DIR = $Env:TONY_BIN_DIR
@@ -155,21 +171,22 @@ $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
 $VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
 
 # WasmEdge Setup
-$WASM_EDGE_VERSION = "WasmEdge-0.9.0-Windows"
+$WASM_EDGE_VERSION = 'WasmEdge-0.9.0-Windows'
 $Env:WASM_ROOT = "$TONY_LIB_DIR\$WASM_EDGE_VERSION"
 $WASM_ROOT = $Env:WASM_ROOT
 
 # Get clang version & set CXX variable
 try {
-    $tmp = (clang++ --version).Item(0).Split("version", 2)[1].Trim()
+    $tmp = (clang++ --version).Item(0).Split('version', 2)[1].Trim()
     $Env:CLANG_VERSION = $tmp
-    $CXX = "clang++"
-    $Env:CXX = "clang++"
-} catch {
-    Write-Output "Unable to get clang version!"
-    $CLANG_VERSION = "error"
-    $CXX = ""
-    $Env:CXX = ""
+    $CXX = 'clang++'
+    $Env:CXX = 'clang++'
+}
+catch {
+    Write-Host -ForegroundColor Yellow 'Unable to get clang version!'
+    $CLANG_VERSION = 'error'
+    $CXX = ''
+    $Env:CXX = ''
 }
 
 # Misc. Globals
@@ -210,6 +227,8 @@ if ($_shouldinit) {
     Import-Module PSReadline -MinimumVersion 2.2.0
     Initialize-VcpkgPosh
     Initialize-TonyDrive
+    # Getting errors doing it the recommended way, instead wrote the output to a completion file
+    # Initialize-Zoxide    
 
     Write-Log -Level INFO -Message 'Sourcing PSReadline config...'
     . "$PROFILE_DIR\PSReadlineDefaults.ps1"

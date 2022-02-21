@@ -12,4 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-Import-Module npm-completion
+if (Get-InstalledModule npm-completion -ErrorAction SilentlyContinue) {
+    Import-Module npm-completion
+} elseif (Get-InstalledModule NPMTabCompletion -ErrorAction SilentlyContinue) {
+    Import-Module NPMTabCompletion
+} else {
+    Write-Host -ForegroundColor Yellow "No NPM completions found, either install 'npm-completion' or 'NPMTabCompletion', or edit Completions/npm.ps1 to include the option you're using!"
+}

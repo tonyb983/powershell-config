@@ -123,20 +123,24 @@ function Invoke-GitAddCommitPush {
         Write-Host -Foreground Yellow '(this is pulled from git config --get init.defaultBranch)'
     }
 
-    if ($args.Contains('--help') -or $args.Contains('-h') -or $CommitMessage.StartsWith('--help')) {
+    if ($args.Contains('--help') -or $args.Contains('-h') -or $CommitMessage.StartsWith('--help') -or $args.Contains('-?')) {
+        Write-Log -Level INFO -Message 'help or h or -? found in args, printing usage' -Arguments $status_check
         PrintUsage
         return
     }
 
     if ($null -eq $CommitMessage -or '' -eq $CommitMessage) {
-        Write-Host -ForegroundColor Red "Please specify a commit message.`n"
+        Write-Log -Level WARNING -Message 'CommitMessage is empty or null' -Arguments $status_check
+        Write-Host -ForegroundColor Yellw "You must specify a commit message.`n"
         PrintUsage
         return
     }
 
     $status_check = (git status)
+    Write-Log -Level INFO -Message 'Git status: {0}' -Arguments "$status_check"
     if ([string]::Join(' ', $status_check).Contains('nothing to commit')) {
         Write-Host -ForegroundColor Cyan "`n`nNO CHANGES FOUND TO COMMIT!`n"
+        Write-Log -Level WARNING -Message 'git status reports nothing to commit, early out. status = {0}' -Arguments $status_check
         return
     }
 
@@ -146,22 +150,34 @@ function Invoke-GitAddCommitPush {
     $RemoteTotal = $bracket_reg.Match($line).Groups[1].Value
     $Remote = $RemoteTotal.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[0]
     $RemoteBranch = $RemoteTotal.Split('/', [StringSplitOptions]::RemoveEmptyEntries)[1]
-    Write-Output "Calling GACP with:`n`tCommit Message = $CommitMessage`n`tBranch = $Branch`n`tRemote = $Remote`n`tRemote Branch = $RemoteBranch`n`tRemoteTotal = $RemoteTotal"
+    $_msg = "Calling GACP with:`n`tCommit Message = $CommitMessage`n`tBranch = $Branch`n`tRemote = $Remote`n`tRemote Branch = $RemoteBranch`n`tRemoteTotal = $RemoteTotal"
+    Write-Output $_msg
+    Write-Log -Level INFO -Message "$_msg"
+
 
     try {
-        git add .    
+        git add .
+        
     }
     catch {
         Write-Error "An error has occurred while running 'git add .'!`n"
         Write-Error -ErrorRecord $_
+        Write-Log -Level ERROR -Message "Error caught during 'git add .': {0}" -Arguments $_
         return
     }
     if (! $?) {
+        Write-Log -Level ERROR -Message "Nothing caught during 'git add .' but status is not true. Error[0] = {0}" -Arguments $Error[0]
         throw "An error occurred during 'git add .': $Error"
         return
     }
 
-    $is_up_to_date = (git status)
+    $status_check = (git status)
+    Write-Log -Level INFO -Message 'Git status: {0}' -Arguments "$status_check"
+    if ([string]::Join(' ', $status_check).Contains('nothing to commit')) {
+        Write-Host -ForegroundColor Cyan "`n`nNO CHANGES FOUND TO COMMIT!`n"
+        Write-Log -Level WARNING -Message 'git status reports nothing to commit, early out. status = {0}' -Arguments $status_check
+        return
+    }
 
     try {
         git commit -m $CommitMessage
@@ -169,27 +185,33 @@ function Invoke-GitAddCommitPush {
     catch {
         Write-Error "An error has occurred while running 'git commit -m $CommitMessage'!`n"
         Write-Error -ErrorRecord $_
+        Write-Log -Level ERROR -Message "Error caught during 'git commit': {0}" -Arguments $_
         return
     }
     if (! $?) {
+        Write-Log -Level ERROR -Message "Nothing caught during 'git commit' but status is not true. Error[0] = {0}" -Arguments $Error[0]
         throw "An error occurred during 'git commit -m $CommitMessage': $Error"
         return
     }
 
     try {
         if ($Remote -ne '' -and $RemoteBranch -ne '' -and $Branch -ne '') {
+            Write-Log -Level INFO -Message 'Running git push -u Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
             git push -u "$Remote" "$Branch"
         }
         else {
-            Write-Output 'Remote branch and local branch do not match!'
+            Write-Host -ForegroundColor Red 'Remote branch and local branch do not match!'
+            Write-Log -Level ERROR -Message 'Remote branch and local branch do not match Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
         }
     }
     catch {
         Write-Error "An error has occurred while running 'git push -u $Remote $Branch'!`n"
         Write-Error -ErrorRecord $_
+        Write-Log -Level ERROR -Message "Error caught during 'git commit': {0}" -Arguments $_
         return
     }
     if (! $?) {
+        Write-Log -Level ERROR -Message "Nothing caught during 'git commit' but status is not true. Error[0] = {0}" -Arguments $Error[0]
         throw "An error occurred during 'git push -u $Remote $Branch': $Error"
         return
     }
