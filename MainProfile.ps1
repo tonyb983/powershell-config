@@ -115,6 +115,25 @@ function Initialize-Zoxide {
         })
 }
 
+function Initialize-BurntToast {
+    Write-Log -Level INFO -Message 'Initialize-Zoxide called'
+    Import-Module BurntToast -MinimumVersion 1.0.0
+    $_tmpbt = New-BTContentBuilder
+    $_tmpbt.AddHeader((Get-Date -UFormat '%m/%d/%Y %R').ToString(), 'Burnt Toast', '') | Out-Null
+    $_tmpbt.AddText('BurntToast Module Loaded!', [Microsoft.Toolkit.Uwp.Notifications.AdaptiveTextStyle]::Subheader) | Out-Null
+    $_tmpbt.Show()
+}
+
+function Show-QuickToast($Title, $Content, $AppId = $null) {
+    $_title = $null -eq $Title ? 'Quick Toast' : $Title
+    $_content = $null -eq $Content ? 'Toast notification.' : $Content
+    $_id = $null -eq $AppId ? (Get-Date -UFormat '%m/%d/%Y %R').ToString() : $AppId
+    $_tmpbt = New-BTContentBuilder
+    $_tmpbt.AddHeader($_id, $_title, '') | Out-Null
+    $_tmpbt.AddText($_content) | Out-Null
+    $_tmpbt.Show()
+}
+
 function Register-ConsoleLoggingTarget {
     Add-LoggingTarget -Name Console -Configuration @{
         PrintException = $true
@@ -225,6 +244,8 @@ if ($_shouldinit) {
 
     Import-Module posh-git
     Import-Module PSReadline -MinimumVersion 2.2.0
+    Import-Module BurntToast -MinimumVersion 1.0.0
+    Initialize-BurntToast
     Initialize-VcpkgPosh
     Initialize-TonyDrive
     # Getting errors doing it the recommended way, instead wrote the output to a completion file
