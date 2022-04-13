@@ -259,7 +259,7 @@ if ($_shouldinit) {
 
     Import-Module posh-git
     Import-Module PSReadline -MinimumVersion 2.2.0
-    Import-Module BurntToast -MinimumVersion 1.0.0
+    # Import-Module BurntToast -MinimumVersion 1.0.0
     Initialize-BurntToast
     Initialize-VcpkgPosh
     Initialize-TonyDrive
