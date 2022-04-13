@@ -18,6 +18,16 @@ function Initialize-VcpkgPosh {
     }
 }
 
+function Test-ModuleLoaded($ModuleName) {
+    Write-Log -Level INFO -Message 'Test-ModuleLoaded called'
+    if ($null -eq $ModuleName -or $ModuleName -eq '') {
+        Write-Log -Level ERROR -Message 'Test-ModuleLoaded called with null module name'
+        return $false
+    }
+
+    return $null -ne (Get-Module | Where-Object -Property Name -EQ $ModuleName)
+}
+
 function Update-Vcpkg {
     Write-Log -Level INFO -Message 'Update-Vcpkg called, checking for updates to vcpkg'
 
@@ -116,7 +126,12 @@ function Initialize-Zoxide {
 }
 
 function Initialize-BurntToast {
-    Write-Log -Level INFO -Message 'Initialize-Zoxide called'
+    Write-Log -Level INFO -Message 'Initialize-BurnToast called'
+    if (Test-ModuleLoaded 'BurntToast') {
+        Show-QuickToast -Title 'Burnt Toast' -Content 'Burnt Toast is already loaded!'
+        return
+    }
+
     Import-Module BurntToast -MinimumVersion 1.0.0
     $_tmpbt = New-BTContentBuilder
     $_tmpbt.AddHeader((Get-Date -UFormat '%m/%d/%Y %R').ToString(), 'Burnt Toast', '') | Out-Null
