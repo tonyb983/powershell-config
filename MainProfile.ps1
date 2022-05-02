@@ -3,8 +3,8 @@
 # Powershell Preview
 # C:\Program Files\PowerShell\7-preview\pwsh.exe
 # Windows Terminal (These seem to be the same, I'm guessing the top level just directs to the correct nested exe)
-# C:\Users\alexa\AppData\Local\Microsoft\WindowsApps\wt.exe
-# C:\Users\alexa\AppData\Local\Microsoft\WindowsApps\Microsoft.WindowsTerminal_8wekyb3d8bbwe\wt.exe
+# C:\Users\tonyb\AppData\Local\Microsoft\WindowsApps\wt.exe
+# C:\Users\tonyb\AppData\Local\Microsoft\WindowsApps\Microsoft.WindowsTerminal_8wekyb3d8bbwe\wt.exe
 
 function Initialize-VcpkgPosh {
     Write-Log -Level INFO -Message 'Initialize-VcpkgPosh called'
@@ -108,7 +108,7 @@ function Initialize-TonyDrive {
             Write-Log -Level WARNING -Message 'TonyDrive already exists'
         }
         else {
-            New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global
+            New-PSDrive -Name Tony -PSProvider FileSystem -Root $Env:TONY_DIR -Scope global > $null
         }
     }
     else {
@@ -132,11 +132,14 @@ function Initialize-BurntToast {
         return
     }
 
-    Import-Module BurntToast -MinimumVersion 1.0.0
-    $_tmpbt = New-BTContentBuilder
-    $_tmpbt.AddHeader((Get-Date -UFormat '%m/%d/%Y %R').ToString(), 'Burnt Toast', '') | Out-Null
-    $_tmpbt.AddText('BurntToast Module Loaded!', [Microsoft.Toolkit.Uwp.Notifications.AdaptiveTextStyle]::Subheader) | Out-Null
-    $_tmpbt.Show()
+    do {
+        $_tmpbt = New-BTContentBuilder
+        $_tmpbt.AddHeader((Get-Date -UFormat '%m/%d/%Y %R').ToString(), 'Burnt Toast', '') | Out-Null
+        $_tmpbt.AddText('BurntToast Module Loaded!', [Microsoft.Toolkit.Uwp.Notifications.AdaptiveTextStyle]::Subheader) | Out-Null
+        $_tmpbt.Show() 
+    } while ($false)
+
+    Import-Module BurntToast -MinimumVersion 1.0.0 
 }
 
 function Show-QuickToast($Title, $Content, $AppId = $null) {
@@ -151,17 +154,42 @@ function Show-QuickToast($Title, $Content, $AppId = $null) {
 
 function Register-ConsoleLoggingTarget {
     Add-LoggingTarget -Name Console -Configuration @{
-        PrintException = $true
+        PrintException = $true;
+        Level          = 'WARNING'
     }
 }
 
 function Register-FileLoggingTarget {
     Add-LoggingTarget -Name File -Configuration @{
-        Path           = ('{0}\main_{1}.log' -f $PS_LOG_DIR, '%{+%Y%m%d}')
-        PrintBody      = $true
-        PrintException = $true
-        Append         = $true
+        Path           = ('{0}\main_{1}.log' -f $PS_LOG_DIR, '%{+%Y%m%d}');
+        PrintBody      = $true;
+        PrintException = $true;
+        Append         = $true;
         Encoding       = 'ascii'
+    }
+}
+
+function Register-OtherSources {
+    Write-Log -Level INFO -Message 'Sourcing additional config...'
+    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1') {
+        Write-Log -Level INFO -Message 'Sourcing {0}.' -Arguments $_it.Name
+        if ($_it.BaseName.StartsWith('_')) {
+            Write-Log -Level INFO -Message 'Config {0} is marked incomplete, skipping.' -Arguments $_it.BaseName  
+            continue 
+        }
+        . $_it
+    }
+}
+
+function Register-Completions {
+    Write-Log -Level INFO -Message 'Sourcing completions...'
+    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1') {
+        Write-Log -Level INFO -Message 'Sourcing {0} completions.' -Arguments $_it.BaseName
+        if ($_it.BaseName.StartsWith('_')) {
+            Write-Log -Level INFO -Message 'Completions for {0} are incomplete, skipping.' -Arguments $_it.BaseName  
+            continue 
+        }
+        . $_it
     }
 }
 
@@ -178,77 +206,96 @@ function Test-IsPromptElevatedManual {
     }
 }
 
-# $DIR_LISTING_TYPE = 'lsd'
-$Env:DIR_LISTING_TYPE = 'default'
-$DIR_LISTING_TYPE = $Env:DIR_LISTING_TYPE
-$Env:PROFILE_DIR = (Split-Path $PROFILE)
-$PROFILE_DIR = $Env:PROFILE_DIR
-# Read this from the ENV, that way dir path for other folders
-# is not hard-wired to any specific location.
-# $Env:TONY_DIR = (Resolve-Path C:\Tony)
-$TONY_DIR = $Env:TONY_DIR
-$Env:TONY_BIN_DIR = (Resolve-Path "$TONY_DIR\Bin\")
-$TONY_BIN_DIR = $Env:TONY_BIN_DIR
-$Env:TONY_CODE_DIR = (Resolve-Path "$TONY_DIR\Code\")
-$TONY_CODE_DIR = $Env:TONY_CODE_DIR
-$Env:TONY_REPOS_DIR = (Resolve-Path "$TONY_DIR\Repos\")
-$TONY_REPOS_DIR = $Env:TONY_REPOS_DIR
-$Env:PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
-$PS_LOG_DIR = $Env:PS_LOG_DIR
-$Env:TONY_LIB_DIR = (Resolve-Path "$TONY_DIR\Lib\")
-$TONY_LIB_DIR = $Env:TONY_LIB_DIR
-
-# Vcpkg Options
-$Env:VCPKG_ROOT = "$TONY_DIR\Repos\vcpkg"
-$VCPKG_ROOT = $Env:VCPKG_ROOT
-$Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
-$VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
-
-# WasmEdge Setup
-$WASM_EDGE_VERSION = 'WasmEdge-0.9.0-Windows'
-$Env:WASM_ROOT = "$TONY_LIB_DIR\$WASM_EDGE_VERSION"
-$WASM_ROOT = $Env:WASM_ROOT
-
-# Get clang version & set CXX variable
-try {
-    $tmp = (clang++ --version).Item(0).Split('version', 2)[1].Trim()
-    $Env:CLANG_VERSION = $tmp
-    $CXX = 'clang++'
-    $Env:CXX = 'clang++'
-}
-catch {
-    Write-Host -ForegroundColor Yellow 'Unable to get clang version!'
-    $CLANG_VERSION = 'error'
-    $CXX = ''
-    $Env:CXX = ''
+function Initialize-PSReadline {
+    Write-Log -Level INFO -Message 'Initialize-PSReadline called'
+    Write-Log -Level INFO -Message 'Importing PSReadline'
+    Import-Module PSReadline -MinimumVersion 2.2.0
+    Write-Log -Level INFO -Message 'Sourcing PSReadline config...'
+    . "$PROFILE_DIR\PSReadlineDefaults.ps1"
 }
 
-# Misc. Globals
-$Env:EDITOR = 'code'
-$EDITOR = $Env:EDITOR
+function Initialize-ProfileEnvironment {
+    # $DIR_LISTING_TYPE = 'lsd'
+    $Env:DIR_LISTING_TYPE = 'default'
+    $DIR_LISTING_TYPE = $Env:DIR_LISTING_TYPE
+    $Env:PROFILE_DIR = (Split-Path $PROFILE)
+    $PROFILE_DIR = $Env:PROFILE_DIR
+    # Read this from the ENV, that way dir path for other folders
+    # is not hard-wired to any specific location.
+    # $Env:TONY_DIR = (Resolve-Path C:\Tony)
+    $TONY_DIR = $Env:TONY_DIR
+    $Env:TONY_BIN_DIR = (Resolve-Path "$TONY_DIR\Bin\")
+    $TONY_BIN_DIR = $Env:TONY_BIN_DIR
+    $Env:TONY_CODE_DIR = (Resolve-Path "$TONY_DIR\Code\")
+    $TONY_CODE_DIR = $Env:TONY_CODE_DIR
+    $Env:TONY_REPOS_DIR = (Resolve-Path "$TONY_DIR\Repos\")
+    $TONY_REPOS_DIR = $Env:TONY_REPOS_DIR
+    $Env:PS_LOG_DIR = (Resolve-Path "$PROFILE_DIR\Logs")
+    $PS_LOG_DIR = $Env:PS_LOG_DIR
+    $Env:TONY_LIB_DIR = (Resolve-Path "$TONY_DIR\Lib\")
+    $TONY_LIB_DIR = $Env:TONY_LIB_DIR
 
-$_isterm = $host.Name -eq 'ConsoleHost'
-$_isvscode = $env:TERM_PROGRAM -eq 'vscode'
-$_isnoni = [System.Environment]::GetCommandLineArgs() -icontains '-noni' -or [System.Environment]::GetCommandLineArgs() -icontains '-NonInteractive'
-$_shouldinit = !$_isnoni -and $_isterm
+    # Vcpkg Options
+    $Env:VCPKG_ROOT = "$TONY_DIR\Repos\vcpkg"
+    $VCPKG_ROOT = $Env:VCPKG_ROOT
+    $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows'
+    $VCPKG_DEFAULT_TRIPLET = $Env:VCPKG_DEFAULT_TRIPLET
 
-$PS_IS_ELEVATED = (Test-IsPromptElevatedManual)
+    # WasmEdge Setup
+    $WASM_EDGE_VERSION = 'WasmEdge-0.9.0-Windows'
+    $Env:WASM_ROOT = "$TONY_LIB_DIR\$WASM_EDGE_VERSION"
+    $WASM_ROOT = $Env:WASM_ROOT
 
-# Logging is set up for any powershell session.
-# Console logging is only enabled for interactive sessions that are NOT run inside of VSCode.
-Initialize-LoggingFramework
-# Register-ConsoleLoggingTarget
-Register-FileLoggingTarget
-Write-Log -Level INFO -Message '====================='
-Write-Log -Level INFO -Message 'Powershell started at {0}' -Arguments (Get-Date)
-Write-Log -Level INFO -Message 'IsElevated = {0}' -Arguments $PS_IS_ELEVATED
-Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
-Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
-Write-Log -Level INFO -Message 'ShouldInit = {0}' -Arguments $_shouldinit
-Write-Log -Level INFO -Message '====================='
+    # Get clang version & set CXX variable
+    try {
+        $tmp = (clang++ --version).Item(0).Split('version', 2)[1].Trim()
+        $Env:CLANG_VERSION = $tmp
+        $CXX = 'clang++'
+        $Env:CXX = 'clang++'
+    }
+    catch {
+        Write-Host -ForegroundColor Yellow 'Unable to get clang version!'
+        $CLANG_VERSION = 'error'
+        $CXX = ''
+        $Env:CXX = ''
+    }
 
-#use PSReadLine only for PowerShell and VS Code
-if ($_shouldinit) {
+    # Misc. Globals
+    $Env:EDITOR = 'code'
+    $EDITOR = $Env:EDITOR
+}
+
+function Initialize-MainProfile {
+    $_isterm = $host.Name -eq 'ConsoleHost'
+    $_isvscode = $env:TERM_PROGRAM -eq 'vscode'
+    $_isnoni = [System.Environment]::GetCommandLineArgs() -icontains '-noni' -or [System.Environment]::GetCommandLineArgs() -icontains '-NonInteractive'
+    $_shouldinit = !$_isnoni -and $_isterm
+
+    $PS_IS_ELEVATED = (Test-IsPromptElevatedManual)
+
+    # Logging is set up for any powershell session.
+    # Console logging is only enabled for interactive sessions that are NOT run inside of VSCode.
+    . Initialize-LoggingFramework
+    . Register-ConsoleLoggingTarget
+    . Register-FileLoggingTarget
+    Write-Log -Level INFO -Message '====================='
+    Write-Log -Level INFO -Message 'Powershell started at {0}' -Arguments (Get-Date)
+    Write-Log -Level INFO -Message 'IsElevated = {0}' -Arguments $PS_IS_ELEVATED
+    Write-Log -Level INFO -Message 'IsTerm = {0} | IsVSCode = {1} | IsNonInteractive = {2}' -Arguments $_isterm, $_isvscode, $_isnoni
+    Write-Log -Level INFO -Message 'Host = {0} | Args = {1}.' -Arguments $host.Name, ([System.Environment]::GetCommandLineArgs() -join ',')
+    Write-Log -Level INFO -Message 'ShouldInit = {0}' -Arguments $_shouldinit
+    Write-Log -Level INFO -Message '====================='
+
+
+    if (!($_shouldinit)) {
+        return
+    }
+
+    . Initialize-ProfileInteractive
+}
+
+function Initialize-ProfileInteractive {
+    #use PSReadLine only for PowerShell and VS Code
     Write-Log -Level INFO -Message 'Starting MainProfile init'
 
     #ensure the correct version is loaded
@@ -257,37 +304,14 @@ if ($_shouldinit) {
         Import-Module Terminal-Icons
     }
 
+    . Initialize-PSReadline
     Import-Module posh-git
-    Import-Module PSReadline -MinimumVersion 2.2.0
-    # Import-Module BurntToast -MinimumVersion 1.0.0
-    Initialize-BurntToast
-    Initialize-VcpkgPosh
-    Initialize-TonyDrive
-    # Getting errors doing it the recommended way, instead wrote the output to a completion file
-    # Initialize-Zoxide    
-
-    Write-Log -Level INFO -Message 'Sourcing PSReadline config...'
-    . "$PROFILE_DIR\PSReadlineDefaults.ps1"
-
-    Write-Log -Level INFO -Message 'Sourcing completions...'
-    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Completions" -Filter '*.ps1') {
-        Write-Log -Level INFO -Message 'Sourcing {0} completions.' -Arguments $_it.BaseName
-        if ($_it.BaseName.StartsWith('_')) {
-            Write-Log -Level INFO -Message 'Completions for {0} are incomplete, skipping.' -Arguments $_it.BaseName  
-            continue 
-        }
-        . $_it
-    }
-
-    Write-Log -Level INFO -Message 'Sourcing additional config...'
-    foreach ($_it in Get-ChildItem "$PROFILE_DIR\Sources" -Filter '*.ps1') {
-        Write-Log -Level INFO -Message 'Sourcing {0}.' -Arguments $_it.Name
-        if ($_it.BaseName.StartsWith('_')) {
-            Write-Log -Level INFO -Message 'Config {0} is marked incomplete, skipping.' -Arguments $_it.BaseName  
-            continue 
-        }
-        . $_it
-    }
+    . Initialize-BurntToast
+    . Initialize-VcpkgPosh
+    . Initialize-TonyDrive
+    
+    . Register-Completions
+    . Register-OtherSources
 
     Invoke-Expression (&starship init powershell)
 
@@ -304,3 +328,6 @@ if ($_shouldinit) {
         Invoke-Fetch
     }
 }
+
+. Initialize-ProfileEnvironment
+. Initialize-MainProfile

@@ -3,4 +3,7 @@ Logs
 Modules
 Scripts
 
+/CSharp/**/bin
+/CSharp/**/obj
+
 .update_marker
