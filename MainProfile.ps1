@@ -255,7 +255,7 @@ function Initialize-ProfileEnvironment {
     }
     catch {
         Write-Host -ForegroundColor Yellow 'Unable to get clang version!'
-        $CLANG_VERSION = 'error'
+        $Env:CLANG_VERSION = 'error'
         $CXX = ''
         $Env:CXX = ''
     }

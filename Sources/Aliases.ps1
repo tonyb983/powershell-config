@@ -155,19 +155,12 @@ function Invoke-GitAddCommitPush {
     Write-Log -Level INFO -Message "$_msg"
 
 
-    try {
-        git add .
+    git add .
         
-    }
-    catch {
+    if (! $?) {
         Write-Error "An error has occurred while running 'git add .'!`n"
         Write-Error -ErrorRecord $_
         Write-Log -Level ERROR -Message "Error caught during 'git add .': {0}" -Arguments $_
-        return
-    }
-    if (! $?) {
-        Write-Log -Level ERROR -Message "Nothing caught during 'git add .' but status is not true. Error[0] = {0}" -Arguments $Error[0]
-        throw "An error occurred during 'git add .': $Error"
         return
     }
 
@@ -179,56 +172,29 @@ function Invoke-GitAddCommitPush {
         return
     }
 
-    try {
-        git commit -m $CommitMessage
-    }
-    catch {
+    git commit -m $CommitMessage
+    if (! $?) {
         Write-Error "An error has occurred while running 'git commit -m $CommitMessage'!`n"
         Write-Error -ErrorRecord $_
         Write-Log -Level ERROR -Message "Error caught during 'git commit': {0}" -Arguments $_
         return
     }
-    if (! $?) {
-        Write-Log -Level ERROR -Message "Nothing caught during 'git commit' but status is not true. Error[0] = {0}" -Arguments $Error[0]
-        throw "An error occurred during 'git commit -m $CommitMessage': $Error"
-        return
-    }
 
-    try {
-        if ($Remote -ne '' -and $RemoteBranch -ne '' -and $Branch -ne '') {
-            Write-Log -Level INFO -Message 'Running git push -u Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
-            git push -u "$Remote" "$Branch"
-        }
-        else {
-            Write-Host -ForegroundColor Red 'Remote branch and local branch do not match!'
-            Write-Log -Level ERROR -Message 'Remote branch and local branch do not match Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
-        }
+    if ($Remote -ne '' -and $RemoteBranch -ne '' -and $Branch -ne '') {
+        Write-Log -Level INFO -Message 'Running git push -u Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
+        git push -u "$Remote" "$Branch"
     }
-    catch {
+    else {
+        Write-Host -ForegroundColor Red 'Remote branch and local branch do not match!'
+        Write-Log -Level ERROR -Message 'Remote branch and local branch do not match Remote = {0} Branch = {1}' -Arguments "$Remote", "$Branch"
+    }
+        
+    if (! $?) {
         Write-Error "An error has occurred while running 'git push -u $Remote $Branch'!`n"
         Write-Error -ErrorRecord $_
         Write-Log -Level ERROR -Message "Error caught during 'git commit': {0}" -Arguments $_
         return
     }
-    if (! $?) {
-        Write-Log -Level ERROR -Message "Nothing caught during 'git commit' but status is not true. Error[0] = {0}" -Arguments $Error[0]
-        throw "An error occurred during 'git push -u $Remote $Branch': $Error"
-        return
-    }
-}
-
-function Start-Brogue {
-    [CmdletBinding()]
-    param (
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]]
-        $Params
-    )
-
-    $_params = ($Params -join ' ')
-    Write-Log -Level INFO -Message 'Start-Brogue called. RawParams = {0}, FixedParams = {1}' -Arguments $Params, $_params
-    $_broguepath = 'C:\Tony\Misc\BrogueCE-windows\brogue-cmd.bat'
-    Invoke-Expression "$_broguepath $_params"
 }
 
 Set-Alias -Name cat -Value Invoke-Batcat # -PassThru
