@@ -266,10 +266,10 @@ function Confirm-YesOrNo {
 
 function Test-IsPromptElevated {
     if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-        $false
+        Write-Host 'This prompt seems NOT ELEVATED.'
     }
     else {
-        $true
+        Write-Host 'This prompt seems super ELEVATED.'
     }
 }
 
