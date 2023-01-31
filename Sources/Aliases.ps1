@@ -136,6 +136,21 @@ function Invoke-GitAddCommitPush {
         return
     }
 
+    $CommitMessage | commitlint
+    if ($? -ne $true) {
+        Write-Log -Level WARNING -Message 'commitlint failed, early out' -Arguments $status_check
+        Write-Host -ForegroundColor Yellow "Commit message failed commitlint.`n"
+        if ((Confirm-YesOrNo -Description 'Commit message has failed commitlint, would you like to override and continue anyways?') -eq $false) {
+            Write-Log -Level WARNING -Message 'User chose to abort' -Arguments $status_check
+            Write-Host -ForegroundColor Red "Aborting GitAddCommitPush.`n"
+            return
+        }
+        else {
+            Write-Log -Level INFO -Message 'User chose to continue' -Arguments $status_check
+            Write-Host -ForegroundColor Green "Continuing GitAddCommitPush with `"invalid`" commit message.`n"
+        }
+    }
+
     $status_check = (git status)
     Write-Log -Level INFO -Message 'Git status: {0}' -Arguments "$status_check"
     if ([string]::Join(' ', $status_check).Contains('nothing to commit')) {

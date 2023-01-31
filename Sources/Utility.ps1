@@ -340,6 +340,15 @@ function Test-EarlyReturn {
     Write-Host 'Wow, this only happens in 3.125% of runs!'
 }
 
+function Test-YesOrNo {
+    if ((Confirm-YesOrNo -Description 'Commit message has failed commitlint, would you like to continue?') -eq $false) {
+        Write-Host -ForegroundColor Red "Aborting command!`n"
+    }
+    else {
+        Write-Host -ForegroundColor Green "Continuing command!`n"
+    }
+}
+
 <#
 .SYNOPSIS
     Runs a cargo command in this and all sub-projects.
