@@ -273,6 +273,73 @@ function Test-IsPromptElevated {
     }
 }
 
+function Get-CoinFlip {
+    $_res = @(0, 1) | Get-Random
+
+    if ($_res -eq 0) {
+        return $false
+    }
+    else {
+        return $true
+    }
+}
+
+function Test-EarlyReturn {
+    Write-Host 'Starting Test-EarlyReturn'
+
+    $_a = Get-CoinFlip
+    Write-Host 'Coin Flip 1'
+    if ($_a) {
+        Write-Host 'Coin flip was heads, returning early'
+        return
+    }
+    else {
+        Write-Host 'Coin flip was tails, continuing'
+    }
+
+    $_a = Get-CoinFlip
+    Write-Host 'Coin Flip 2'
+    if ($_a) {
+        Write-Host 'Coin flip was heads, returning early'
+        return
+    }
+    else {
+        Write-Host 'Coin flip was tails, continuing'
+    }
+
+    $_a = Get-CoinFlip
+    Write-Host 'Coin Flip 3'
+    if ($_a) {
+        Write-Host 'Coin flip was heads, returning early'
+        return
+    }
+    else {
+        Write-Host 'Coin flip was tails, continuing'
+    }
+
+    $_a = Get-CoinFlip
+    Write-Host 'Coin Flip 4'
+    if ($_a) {
+        Write-Host 'Coin flip was heads, returning early'
+        return
+    }
+    else {
+        Write-Host 'Coin flip was tails, continuing'
+    }
+
+    $_a = Get-CoinFlip
+    Write-Host 'Coin Flip 5'
+    if ($_a) {
+        Write-Host 'Coin flip was heads, returning early'
+        return
+    }
+    else {
+        Write-Host 'Coin flip was tails, continuing'
+    }
+
+    Write-Host 'Wow, this only happens in 3.125% of runs!'
+}
+
 <#
 .SYNOPSIS
     Runs a cargo command in this and all sub-projects.
