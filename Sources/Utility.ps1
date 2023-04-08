@@ -369,34 +369,40 @@ function Test-YesOrNo {
 function Invoke-CargoOnAll {
     [CmdletBinding()]
     param (
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [ScriptBlock]
         $Block,
+        [Parameter(Mandatory = $false)]
+        [string]
+        $CratesRoot = $pwd,
         # Parameter help description
         [Parameter(Mandatory = $false)]
         [uint16]
         $Depth = [uint16]::MaxValue
     )
 
-    $all_dirs = (Get-ChildItem $pwd -Directory -Recurse -Depth $Depth -Exclude 'target', '.*')
+    $all_dirs = (Get-ChildItem $CratesRoot -Directory -Recurse -Depth $Depth -Exclude 'target', '.*')
     # Write-Output "Found $($all_dirs.Count) total dirs."
     $sub_dirs = $all_dirs | Where-Object -FilterScript { Test-Path (Join-Path $_ 'Cargo.toml') }
     $dirs = @()
     $dirs += $sub_dirs
-    if (Test-Path .\Cargo.toml) {
+    if ((Test-Path .\Cargo.toml -ErrorAction SilentlyContinue) -and ((Test-Path './src/main.rs' -ErrorAction SilentlyContinue) -or (Test-Path './src/lib.rs' -ErrorAction SilentlyContinue))) {
         $dirs += (Get-Item $pwd)
     }
     # Write-Output "Found $($dirs.Count) Cargo dirs:"
     # $dirs | Out-String
 
+    $CmdString = $Block.ToString()
+
     $dirs | ForEach-Object {
+        $LineSizePadding = $_.Name.Length -gt $CmdString.Length ? $_.Name.Length : $CmdString.Length
         Push-Location $_
         try {
             Write-Output @"
-
-=======================$('=' * $_.Name.Length)=====
-    Running command for $($_.Name)
-=======================$('=' * $_.Name.Length)=====
+=========================$('=' * $LineSizePadding)=========
+    Running command for crate $($_.Name)
+      > $CmdString
+=========================$('=' * $LineSizePadding)=========
 
 "@
             & $Block
