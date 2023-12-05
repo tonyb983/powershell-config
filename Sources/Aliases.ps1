@@ -63,6 +63,22 @@ function Invoke-Ll {
     }
 }
 
+function Invoke-Touch {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    
+    if (Test-Path $Path) {
+        # If the file exists, update its last write time
+        (Get-Item $Path).LastWriteTime = Get-Date
+    }
+    else {
+        # If the file does not exist, create a new empty file
+        New-Item -ItemType File -Path $Path | Out-Null
+    }
+}
+
 function Invoke-GitAddCommitPush {
     <#
     .SYNOPSIS
@@ -218,3 +234,4 @@ Set-Alias -Name ll -Value Invoke-Ll # -PassThru
 Set-Alias -Name gacp -Value Invoke-GitAddCommitPush # -PassThru
 Set-Alias -Name brogue -Value Start-Brogue # -PassThru
 Set-Alias -Name which -Value Invoke-Which # -PassThru
+Set-Alias -Name touch -Value Invoke-Touch # -PassThru
